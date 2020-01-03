@@ -38,12 +38,12 @@ class LintCommand extends ContainerAwareCommand
         $files = [];
         foreach ($paths as $path) {
             if (is_file($path)) {
-                $files[] = new \SplFileInfo($path);
+                $files[$path] = [new \SplFileInfo($path)];
             } else {
                 $finder = new Finder();
                 $found = iterator_to_array($finder->in($path)->exclude($exclude)->name('*.twig'));
                 if (!empty($found)) {
-                    $files = array_merge($files, $found);
+                    $files[$path] = array_merge($files[$path] ?? [], $found);
                 }
             }
         }
@@ -60,12 +60,14 @@ class LintCommand extends ContainerAwareCommand
             throw new \InvalidArgumentException('Ruleset class must implement '.RulesetInterface::class);
         }
 
-        foreach ($files as $file) {
-            $violations = array_merge($violations, $container['validator']->validate(new $ruleset(), $container['twig']->tokenize(new \Twig\Source(
-                file_get_contents($file->getRealPath()),
-                $file->getRealPath(),
-                str_replace(realpath($path), rtrim($path, '/'), $file->getRealPath())
-            ))));
+        foreach ($files as $path => $fileList) {
+            foreach ($fileList as $file) {
+                $violations = array_merge($violations, $container['validator']->validate(new $ruleset(), $container['twig']->tokenize(new \Twig\Source(
+                    file_get_contents($file->getRealPath()),
+                    $file->getRealPath(),
+                    str_replace(realpath($path), rtrim($path, '/'), $file->getRealPath())
+                ))));
+            }
         }
 
         $container[sprintf('reporter.%s', $input->getOption('reporter'))]->report($output, $violations);

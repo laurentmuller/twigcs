@@ -33,6 +33,19 @@ class LintCommandTest extends TestCase
         $this->assertContains('No violation found.', $output);
     }
 
+    public function testMultipleBasePaths()
+    {
+        $this->commandTester->execute([
+            'paths' => ['tests/data/basepaths/a', 'tests/data/basepaths/b'],
+        ]);
+
+        $output = $this->commandTester->getDisplay();
+        $statusCode = $this->commandTester->getStatusCode();
+        $this->assertSame($statusCode, 1);
+        $this->assertContains('tests/data/basepaths/a/bad.html.twig', $output);
+        $this->assertContains('tests/data/basepaths/b/bad.html.twig', $output);
+    }
+
     public function testExecuteWithError()
     {
         $this->commandTester->execute([
