@@ -491,10 +491,10 @@ class RulesetBuilder
             ['not➊$', $this->unaryOpSpace('not', '➊')],
             ['@ __PARENTHESES__', $this->handle()->enforceSize(' ', $this->config['func']['before_parentheses'], 'There should be %quantity% space(s) between a function name and its opening parentheses.')],
             ['\( \)', $this->handle()->enforceSize(' ', $this->config['parentheses']['empty'], 'There should be %quantity% space(s) inside empty parentheses.')],
-            ["\(\n $\n \)", $this->handle()->delegate('$', 'list')], // Multiline function call
+            ["\(\n $\n \)", $this->handle()->delegate('$', 'argsList')], // Multiline function call
             ['\(➀$➁\)', $this
                 ->handle()
-                ->delegate('$', 'list')
+                ->delegate('$', 'argsList')
                 ->enforceSize('➀', $this->config['parentheses']['before_value'], 'There should be %quantity% space(s) between the opening parenthese and its content.')
                 ->enforceSize('➁', $this->config['parentheses']['after_value'], 'There should be %quantity% space(s) between the closing parenthese and its content.'),
             ],
@@ -525,6 +525,9 @@ class RulesetBuilder
             ['$➀!=➁$', $this->binaryOpSpace('!=')],
             ['$➀==➁$', $this->binaryOpSpace('==')],
             ['$➀=➁$', $this->binaryOpSpace('=')],
+            ['$➊b-and➋$', $this->binaryOpSpace('b-and', '➊', '➋')],
+            ['$➊b-xor➋$', $this->binaryOpSpace('b-xor', '➊', '➋')],
+            ['$➊b-or➋$', $this->binaryOpSpace('b-or', '➊', '➋')],
             ['$➊and➋$', $this->binaryOpSpace('and', '➊', '➋')],
             ['$➊or➋$', $this->binaryOpSpace('or', '➊', '➋')],
             ['$➀__TERNARY__➃$', $this->ternaryOpSpace()],
@@ -534,11 +537,11 @@ class RulesetBuilder
             ['$➀\+➁$', $this->binaryOpSpace('+')],
             ['$➀-➁$', $this->binaryOpSpace('-')],
             ['$➀~➁$', $this->binaryOpSpace('~')],
-            ['$➀\*➁$', $this->binaryOpSpace('*')],
-            ['$➀/➁$', $this->binaryOpSpace('/')],
             ['$➀//➁$', $this->binaryOpSpace('//')],
+            ['$➀/➁$', $this->binaryOpSpace('/')],
             ['$➀%➁$', $this->binaryOpSpace('%')],
             ['$➀\*\*➁$', $this->binaryOpSpace('**')],
+            ['$➀\*➁$', $this->binaryOpSpace('*')],
             ['$➊is not➋$', $this->binaryOpSpace('is', '➊', '➋')],
             ['$➊is➋$', $this->binaryOpSpace('is', '➊', '➋')],
             ['$➊not in➋$', $this->binaryOpSpace('in', '➊', '➋')],
@@ -546,7 +549,6 @@ class RulesetBuilder
             ['$➊matches➋$', $this->binaryOpSpace('matches', '➊', '➋')],
             ['$➊starts with➋$', $this->binaryOpSpace('starts with', '➊', '➋')],
             ['$➊ends with➋$', $this->binaryOpSpace('ends with', '➊', '➋')],
-            ['$➀\?\?➁$', $this->binaryOpSpace('??')],
             ['$➀\.\.➁$', $this
                 ->handle()
                 ->delegate('$', 'expr')
@@ -573,6 +575,31 @@ class RulesetBuilder
             [' & ', Handler::create()->noop()],
             [' \[\] ', Handler::create()->noop()],
             [' \?\: ', Handler::create()->noop()],
+        ]);
+
+        $argsList = $this->using(self::LIST_VARS, [
+            [' ', Handler::create()->enforceSize(' ', $this->config['empty_list_whitespaces'], 'Empty list should have %quantity% whitespace(s).')],
+            ['@➀=➁$➂,➃%', Handler::create()
+                ->enforceSize('➀', $this->config['named_args']['before_='], 'There should be %quantity% space(s) before the "=" in the named arguments list.')
+                ->enforceSize('➁', $this->config['named_args']['after_='], 'There should be %quantity% space(s) after the "=" in the named arguments list.')
+                ->enforceSize('➂', $this->config['named_args']['after_value'], 'There should be %quantity% space(s) after the value in the named arguments list.')
+                ->delegate('$', 'expr')
+                ->delegate('%', 'argsList'),
+            ],
+            ['@➀=(?!>)➁$', Handler::create()
+                ->enforceSize('➀', $this->config['named_args']['before_='], 'There should be %quantity% space(s) before the "=" in the named arguments list.')
+                ->enforceSize('➁', $this->config['named_args']['after_='], 'There should be %quantity% space(s) after the "=" in the named arguments list.')
+                ->delegate('$', 'expr'),
+            ],
+            ['$_, %', Handler::create()
+                ->delegate('$', 'expr')
+                ->delegate('%', 'argsList')
+                ->enforceSize('_', $this->config['list']['after_value'], 'There should be %quantity% space(s) before the ",".')
+                ->enforceSpaceOrLineBreak(' ', $this->config['list']['after_coma'], 'The next value of a list should be separated by %quantity% space(s).'),
+            ],
+            [' @ ', Handler::create()->enforceSize(' ', 0, 'A single valued list should have no inner whitespace.')],
+            [' $, ', Handler::create()->delegate('$', 'expr')->enforceSize(' ', 0, 'A single valued list should have no inner whitespace.')],
+            [' $ ', Handler::create()->delegate('$', 'expr')->enforceSize(' ', 0, 'A single valued list should have no inner whitespace.')],
         ]);
 
         $list = $this->using(self::LIST_VARS, [
@@ -641,6 +668,12 @@ class RulesetBuilder
                 ->enforceSize(' ', $this->config['hash']['after_key'], 'There should be %quantity% space(s) between the key and ":".')
                 ->enforceSize('_', $this->config['hash']['before_value'], 'There should be %quantity% space(s) between ":" and the value.'),
             ],
+            ['@•,…%', Handler::create()
+                ->delegate('%', 'hash')
+                ->enforceSize('•', $this->config['hash']['after_value'], 'There should be %quantity% space(s) between the value and the following ",".')
+                ->enforceSpaceOrLineBreak('…', $this->config['hash']['after_coma'], 'There should be %quantity% space(s) between the , and the following hash key.'),
+            ],
+            ['@', Handler::create()->noop()], // Collects the last entry of a short object initialization
         ]);
 
         $hashFallback = $this->using(self::FALLBACK_VARS, [
@@ -665,6 +698,7 @@ class RulesetBuilder
         return [
             'expr' => array_merge($tags, $ops, $fallback),
             'list' => $list,
+            'argsList' => $argsList,
             'hash' => array_merge($hash, $hashFallback),
             'imports' => $imports,
             'arrayOrSlice' => array_merge($slice, $array),

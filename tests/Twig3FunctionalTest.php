@@ -141,11 +141,39 @@ class Twig3FunctionalTest extends TestCase
             ['{{ -10 }}', null],
             ['{{ (-10) }}', null],
             ['{% include "file" with {foo: bar ? baz} %}', null],
+            ['{{ 1 / 2 }}', null],
+            ['{{ 1/ 2 }}', 'There should be 1 space between the "/" operator and its left operand.'],
+            ['{{ 1 /2 }}', 'There should be 1 space between the "/" operator and its right operand.'],
+            ['{{ 1 // 2 }}', null],
+            ['{{ 1// 2 }}', 'There should be 1 space between the "//" operator and its left operand.'],
+            ['{{ 1 //2 }}', 'There should be 1 space between the "//" operator and its right operand.'],
+            ['{{ 1 * 2 }}', null],
+            ['{{ 1* 2 }}', 'There should be 1 space between the "*" operator and its left operand.'],
+            ['{{ 1 *2 }}', 'There should be 1 space between the "*" operator and its right operand.'],
+            ['{{ 1 ** 2 }}', null],
+            ['{{ 1** 2 }}', 'There should be 1 space between the "**" operator and its left operand.'],
+            ['{{ 1 **2 }}', 'There should be 1 space between the "**" operator and its right operand.'],
+            ['{{ 1 b-and 2 }}', null],
+            ['{{ 1    b-and 2 }}', 'There should be 1 space between the "b-and" operator and its left operand.'],
+            ['{{ 1 b-and    2 }}', 'There should be 1 space between the "b-and" operator and its right operand.'],
+            ['{{ 1 b-xor 2 }}', null],
+            ['{{ 1    b-xor 2 }}', 'There should be 1 space between the "b-xor" operator and its left operand.'],
+            ['{{ 1 b-xor    2 }}', 'There should be 1 space between the "b-xor" operator and its right operand.'],
+            ['{{ 1 b-or 2 }}', null],
+            ['{{ 1    b-or 2 }}', 'There should be 1 space between the "b-or" operator and its left operand.'],
+            ['{{ 1 b-or    2 }}', 'There should be 1 space between the "b-or" operator and its right operand.'],
 
             // Use lower cased and underscored variable names.
             ['{% set foo = 1 %}{{ foo }}', null],
             ['{% set foo_bar = 1 %}{{ foo_bar }}', null],
             ['{% set fooBar = 1 %}{{ fooBar }}', 'The "fooBar" variable should be in lower case (use _ as a separator).'],
+            ['{% for foo in 1..10 %}{{ foo }}{% endfor %}', null],
+            ['{% for foo_bar in 1..10 %}{{ foo_bar }}{% endfor %}', null],
+            ['{% for fooBar in 1..10 %}{{ fooBar }}{% endfor %}', 'The "fooBar" variable should be in lower case (use _ as a separator).'],
+            ['{% for foo, bar in 1..10 %}{{ foo }}: {{ bar }}{% endfor %}', null],
+            ['{% for foo_key, bar_val in 1..10 %}{{ foo_key }}: {{ bar_val }}{% endfor %}', null],
+            ['{% for fooKey, bar_val in 1..10 %}{{ fooKey }}: {{ bar_val }}{% endfor %}', 'The "fooKey" variable should be in lower case (use _ as a separator).'],
+            ['{% for foo_key, barVal in 1..10 %}{{ foo_key }}: {{ barVal }}{% endfor %}', 'The "barVal" variable should be in lower case (use _ as a separator).'],
 
             // var declaration spacing
             ['{% set  foo = 1 %}{{ foo }}', 'There should be 1 space after the "set".'],
@@ -158,6 +186,9 @@ class Twig3FunctionalTest extends TestCase
             ['{% set foo = 1 %}{{ foo ? foo : 0 }}', null],
             ['{% set foo = 1 %}{% macro toto() %}{{ foo }}{% endmacro %}', 'Unused variable "foo".'], // https://github.com/friendsoftwig/twigcs/issues/27
             ['{% set foo = 1 %}{% if foo %}{% endif %}', null],
+            ['{% set foo = 1 %}{% if bar %}{% elseif fooBar %}{% endif %}', 'Unused variable "foo".'],
+            ['{% set foo = 1 %}{% if bar %}{% elseif foo %}{% endif %}', null],
+            ['{% set foo = 1 %}{% if bar %}{% elseif fooBar %}{% elseif foo %}{% endif %}', null],
             ['{% set foo = [] %}{% for bar in foo %}{{ bar }}{% endfor %}', null],
             ['{% set is = 1 %}{% if 1 is 1 %}{% endif %}', 'Unused variable "is".'],
             ['{% set uppercase = 1 %}{% filter uppercase %}{% endfilter %}', 'Unused variable "uppercase".'],
@@ -308,6 +339,20 @@ class Twig3FunctionalTest extends TestCase
             ['        {%- set vars = widget == "text" ? {"attr": {"size": 1 }} : {} -%}{{ vars }}', 'There should be 0 space after the hash values.', [61, 1]],
             ['{{ {foo: {bar: {baz: {foo: {bar: 1 }}}}} }}', 'There should be 0 space after the hash values.', [34, 1]],
             ['{{ {foo: {bar: 1}}|agg + {baz: 2 }|agg }}', 'There should be 0 space after the hash values.', [32, 1]],
+
+            // Check for named args
+            ['{{ foo(bar=1, baz=2) }}', null],
+            ['{{ foo(1, 2, 3, bar=1, baz=2) }}', null],
+            ['{{ foo(bar =1, baz=2) }}', 'There should be 0 space before the "=" in the named arguments list.'],
+            ['{{ foo(bar= 1, baz=2) }}', 'There should be 0 space after the "=" in the named arguments list.'],
+            ['{{ foo(bar=1 , baz=2) }}', 'There should be 0 space after the value in the named arguments list.'],
+
+            // Check short object initialization
+            ['{% include "foo.html.twig" with {bar, bar} %}', null],
+            ['{% include "foo.html.twig" with {bar, bar, foo: 1} %}', null],
+            ['{% include "foo.html.twig" with {foo: 1, bar, bar} %}', null],
+            ['{% include "foo.html.twig" with {bar   , bar} %}', 'There should be 0 space between the value and the following ",".'],
+            ['{% include "foo.html.twig" with {bar,    bar} %}', 'There should be 1 space between the , and the following hash key.'],
 
             // Check regression of https://github.com/friendsoftwig/twigcs/issues/62
             ['{%~ if foo ~%}', null],
